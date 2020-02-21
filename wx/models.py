@@ -97,13 +97,13 @@ class Restaurant(models.Model):
 
 
 class Dish(models.Model):
-    dish_name = models.CharField(_('菜品名称'), max_length=255, null=True, blank=True)
+    dish_name = models.CharField(_('商品名称'), max_length=255, null=True, blank=True)
     dish_image_0 = models.ImageField(_('主照片'), upload_to='dish/', null=True, blank=True)
     dish_image_1 = models.ImageField(_('照片1'), upload_to='dish/', null=True, blank=True)
     dish_image_2 = models.ImageField(_('照片2'), upload_to='dish/', null=True, blank=True)
     dish_image_3 = models.ImageField(_('照片3'), upload_to='dish/', null=True, blank=True)
     dish_desc = models.TextField(_('菜品描述'), max_length=2000, null=True, blank=True)
-    dish_price = models.DecimalField(_('菜品价格'), null=True, decimal_places=2, max_digits=9, default=18.00)
+    dish_price = models.DecimalField(_('商品价格'), null=True, decimal_places=2, max_digits=9, default=18.00)
     is_available = models.BooleanField(_('是否有效'), default=True)
     restaurant = models.ForeignKey(
         Restaurant,
@@ -119,8 +119,8 @@ class Dish(models.Model):
 
     class Meta:
         ordering = ['id']
-        verbose_name = _('菜品')
-        verbose_name_plural = _('菜品')
+        verbose_name = _('商品')
+        verbose_name_plural = _('商品')
 
     def __str__(self):
         return "{0}".format(
@@ -137,7 +137,8 @@ class Company(models.Model):
     restaurant = models.ManyToManyField(
         Restaurant,
         blank=True,
-        verbose_name=_('可见餐馆')
+        verbose_name=_('可见餐馆'),
+        related_name='company_related_restaurant'
     )
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
@@ -189,7 +190,8 @@ class WxUser(AbstractUser):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name=_('公司')
+        verbose_name=_('公司'),
+        related_name='wx_user'
     )
     restaurant = models.ForeignKey(
         Restaurant,
@@ -266,7 +268,7 @@ class OrderItem(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name=_('产品')
+        verbose_name=_('商品')
     )
     item_count = models.IntegerField(_('数量'), null=True, blank=True)
     marked_price = models.DecimalField(_('标价'), null=True, blank=True, decimal_places=2, max_digits=9)
@@ -280,8 +282,8 @@ class OrderItem(models.Model):
 
     class Meta:
         ordering = ['id']
-        verbose_name = _('订单')
-        verbose_name_plural = _('订单')
+        verbose_name = _('订单明细')
+        verbose_name_plural = _('订单明细')
 
     def __str__(self):
         return "{0} {1}".format(

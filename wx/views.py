@@ -8,6 +8,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from django_filters import rest_framework as filters
+
 from rest_framework.status import *
 from rest_framework.generics import ListCreateAPIView
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -17,6 +19,26 @@ from weixin import WXAPPAPI
 from wx.serializers import *
 
 logger = logging.getLogger('django')
+
+
+class WxFilter(filters.FilterSet):
+
+    @classmethod
+    def filter_for_field(cls, field, field_name, lookup_expr='exact'):
+        filter_class = super().filter_for_field(field, field_name, lookup_expr)
+        if lookup_expr == 'exact':
+            filter_class.extra['help_text'] = '{0} 等于'.format(field.verbose_name)
+        elif lookup_expr == 'contains':
+            filter_class.extra['help_text'] = '{0} 包含'.format(field.verbose_name)
+        elif lookup_expr == 'gte':
+            filter_class.extra['help_text'] = '{0} 大于等于'.format(field.verbose_name)
+        elif lookup_expr == 'gt':
+            filter_class.extra['help_text'] = '{0} 大于'.format(field.verbose_name)
+        elif lookup_expr == 'lt':
+            filter_class.extra['help_text'] = '{0} 小于'.format(field.verbose_name)
+        elif lookup_expr == 'lte':
+            filter_class.extra['help_text'] = '{0} 小于等于'.format(field.verbose_name)
+        return filter_class
 
 
 def make_user_info(openid=None):
@@ -38,7 +60,6 @@ def create_user_by_openid(openid=None):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def wx_login(request):
-
     if request.method == "POST":
         if request.body:
             received_data = json.loads(request.body.decode('utf-8'))
@@ -87,6 +108,66 @@ class JfwTokenObtainPairView(TokenObtainPairView):
     serializer_class = JfwTokenObtainPairSerializer
 
 
+class RestaurantListView(ListCreateAPIView):
+    queryset = Restaurant.objects.filter(is_available=True)
+    serializer_class = RestaurantListSerializer
+    search_fields = (
+        'restaurant_name', 'restaurant_code'
+    )
+
+
+class DishListView(ListCreateAPIView):
+    queryset = Dish.objects.filter(is_available=True).all()
+    serializer_class = DishListSerializer
+    search_fields = (
+        'dish_name', 'dish_desc'
+    )
+
+    def get_queryset(self):
+        queryset = self.queryset.filter(restaurant__company_related_restaurant__wx_user__id=self.request.user.id)
+        return queryset
+
+
 class CompanyListView(ListCreateAPIView):
     queryset = Company.objects.filter(is_available=True)
     serializer_class = CompanyListSerializer
+    search_fields = (
+        'company_name', 'company_code', 'company_address'
+    )
+
+
+class OrderListFilter(WxFilter):
+
+    class Meta:
+        model = Order
+        fields = {
+            'client': ['exact'],
+            'restaurant': ['exact'],
+            'order_date': ['exact']
+        }
+
+
+class OrderListView(ListCreateAPIView):
+    queryset = Order.objects.filter(is_available=True)
+    serializer_class = OrderListSerializer
+    filterset_class = OrderListFilter
+
+
+class OrderItemListFilter(WxFilter):
+
+    class Meta:
+        model = OrderItem
+        fields = {
+            'order': ['exact'],
+            'dish': ['exact'],
+            'dish__dish_name': ['exact', 'contains']
+        }
+
+
+class OrderItemListView(ListCreateAPIView):
+    queryset = OrderItem.objects.filter(is_available=True)
+    serializer_class = OrderItemListSerializer
+    filterset_class = OrderItemListFilter
+    search_fields = (
+        'dish__dish_name', 'order_code'
+    )
