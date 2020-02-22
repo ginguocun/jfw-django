@@ -3,6 +3,9 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+role_choices = [(0, '游客'), (1, '客户'), (2, '商家')]
+
+
 class DistrictLevel(models.Model):
     level = models.CharField(_('辖区等级'), max_length=100, unique=True, null=True, blank=True)
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
@@ -75,10 +78,29 @@ class UserLevel(models.Model):
 
 class Restaurant(models.Model):
     restaurant_name = models.CharField(_('餐馆名称'), max_length=255, unique=True, null=True, blank=True)
-    restaurant_code = models.CharField(_('餐馆企业识别码'), max_length=255, null=True, blank=True)
+    restaurant_code = models.CharField(_('餐馆识别码'), max_length=255, null=True, blank=True)
+    contact_person = models.CharField(_('联系人'), max_length=255, null=True, blank=True)
+    contact_mobile = models.CharField(_('联系方式'), max_length=255, null=True, blank=True)
     restaurant_address = models.TextField(_('餐馆地址'), max_length=2000, null=True, blank=True)
     center = models.CharField(_('中心坐标'), max_length=255, null=True, blank=True)
-    is_available = models.BooleanField(_('是否有效'), default=True)
+    created_by = models.ForeignKey(
+        "WxUser",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='restaurant_created_by',
+        verbose_name=_('创建人员')
+    )
+    confirmed_by = models.ForeignKey(
+        "WxUser",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='restaurant_confirmed_by',
+        verbose_name=_('创建人员')
+    )
+    is_confirmed = models.BooleanField(_('已审核'), default=False)
+    is_active = models.BooleanField(_('有效'), default=False)
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
 
@@ -104,7 +126,6 @@ class Dish(models.Model):
     dish_image_3 = models.ImageField(_('照片3'), upload_to='dish/', null=True, blank=True)
     dish_desc = models.TextField(_('菜品描述'), max_length=2000, null=True, blank=True)
     dish_price = models.DecimalField(_('商品价格'), null=True, decimal_places=2, max_digits=9, default=18.00)
-    is_available = models.BooleanField(_('是否有效'), default=True)
     restaurant = models.ForeignKey(
         Restaurant,
         null=True,
@@ -112,6 +133,7 @@ class Dish(models.Model):
         on_delete=models.SET_NULL,
         verbose_name=_('餐馆')
     )
+    is_active = models.BooleanField(_('是否有效'), default=True)
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
 
@@ -129,17 +151,38 @@ class Dish(models.Model):
 
 
 class Company(models.Model):
+    """
+    公司列表，通常由管理员进行后台添加，游客用户也可以自行创建，由管理员进行审核；
+    公司的管理员有权限更新 restaurant 信息，一个公司有多个管理员；
+    """
     company_name = models.CharField(_('企业名称'), max_length=255, unique=True, null=True, blank=True)
     company_code = models.CharField(_('企业识别码'), max_length=255, unique=True, null=True, blank=True)
     company_address = models.TextField(_('企业地址'), max_length=2000, null=True, blank=True)
     center = models.CharField(_('中心坐标'), max_length=255, null=True, blank=True)
-    is_available = models.BooleanField(_('是否有效'), default=True)
     restaurant = models.ManyToManyField(
         Restaurant,
         blank=True,
         verbose_name=_('可见餐馆'),
         related_name='company_related_restaurant'
     )
+    created_by = models.ForeignKey(
+        "WxUser",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='company_created_by',
+        verbose_name=_('创建人员')
+    )
+    confirmed_by = models.ForeignKey(
+        "WxUser",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='company_confirmed_by',
+        verbose_name=_('创建人员')
+    )
+    is_confirmed = models.BooleanField(_('已审核'), default=False)
+    is_active = models.BooleanField(_('有效'), default=False)
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
 
@@ -158,7 +201,12 @@ class Company(models.Model):
 
 
 class WxUser(AbstractUser):
-
+    """
+    用户列表
+    如果用户有 company 关联信息，用户可以进行订餐；
+    如果用户有 company 关联信息，并且 is_manager 是 True，用户可以统计公司的订单，审核和管理公司员工名单 CompanyEmployee；
+    """
+    # 微信同步的用户信息
     openid = models.CharField(_('微信OpenID'), max_length=100, unique=True, null=True, blank=True)
     avatar_url = models.URLField(_('头像'), null=True, blank=True)
     nick_name = models.CharField(_('昵称'), max_length=100, null=True, blank=True, unique=True)
@@ -167,8 +215,8 @@ class WxUser(AbstractUser):
     city = models.CharField(_('城市'), max_length=200, null=True, blank=True)
     province = models.CharField(_('省份'), max_length=200, null=True, blank=True)
     country = models.CharField(_('国家'), max_length=200, null=True, blank=True)
-    date_of_birth = models.DateField(_('出生日期'), null=True, blank=True)
 
+    date_of_birth = models.DateField(_('出生日期'), null=True, blank=True)
     desc = models.TextField(_('描述'), max_length=2000, null=True, blank=True)
     mobile = models.CharField(_('手机号'), max_length=100, null=True, blank=True, unique=True)
     user_level = models.ForeignKey(
@@ -200,9 +248,10 @@ class WxUser(AbstractUser):
         on_delete=models.SET_NULL,
         verbose_name=_('餐馆')
     )
-    is_owner = models.BooleanField(_('是商家'), default=False, null=True)
-    is_client = models.BooleanField(_('是客户'), default=True, null=True)
-    is_manager = models.BooleanField(_('是管理员'), default=True, null=True)
+    current_role = models.IntegerField(_('当前用户角色'), null=True, default=0, choices=role_choices)
+    is_owner = models.BooleanField(_('是商家'), default=False)
+    is_client = models.BooleanField(_('是客户'), default=True)
+    is_manager = models.BooleanField(_('是管理员'), default=False)
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
 
@@ -213,6 +262,64 @@ class WxUser(AbstractUser):
         return "[{0}] {1}".format(
             self.pk,
             self.nick_name,
+        )
+
+
+class CompanyEmployee(models.Model):
+    """
+    公司员工列表，员工必须在此表内，并且 is_confirmed 和 is_active 同时为 True，才允许进行自行注册通过；
+    如果员工没有在此表内，员工可以自行提交，公司管理员进行审核，审核通过以后员工与公司在 WxUser 进行关联；
+    """
+    company = models.ForeignKey(
+        Company,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name=_('公司'),
+    )
+    employee_name = models.CharField(_('姓名'), max_length=200, null=True, blank=True)
+    mobile = models.CharField(_('手机号'), max_length=20, null=True, blank=True, unique=True)
+    user = models.ForeignKey(
+        WxUser,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='company_employee_user',
+        verbose_name=_('用户')
+    )
+    created_by = models.ForeignKey(
+        WxUser,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='company_employee_created_by',
+        verbose_name=_('创建人员')
+    )
+    confirmed_by = models.ForeignKey(
+        WxUser,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='company_employee_confirmed_by',
+        verbose_name=_('审核人员')
+    )
+    is_confirmed = models.BooleanField(_('已审核'), default=False)
+    is_active = models.BooleanField(_('有效'), default=False)
+    datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
+    datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        ordering = ['id']
+        unique_together = ('company', 'employee_name', 'mobile')
+        verbose_name = _('公司员工名单')
+        verbose_name_plural = _('公司员工名单')
+
+    def __str__(self):
+        return "{0} {1}".format(
+            self.employee_name,
+            self.mobile,
         )
 
 
@@ -237,8 +344,9 @@ class Order(models.Model):
         on_delete=models.SET_NULL,
         verbose_name=_('用户')
     )
+    is_submitted = models.BooleanField(_('已经提交'), default=False)
     is_payed = models.BooleanField(_('已经支付'), default=False)
-    is_available = models.BooleanField(_('是否有效'), default=True)
+    is_active = models.BooleanField(_('是否有效'), default=True)
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
 
@@ -274,7 +382,7 @@ class OrderItem(models.Model):
     marked_price = models.DecimalField(_('标价'), null=True, blank=True, decimal_places=2, max_digits=9)
     payed_unit_price = models.DecimalField(_('单价'), null=True, blank=True, decimal_places=2, max_digits=9)
     payed_total_price = models.DecimalField(_('小计'), null=True, blank=True, decimal_places=2, max_digits=9)
-    is_available = models.BooleanField(_('是否有效'), default=True)
+    is_active = models.BooleanField(_('是否有效'), default=True)
     datetime_created = models.DateTimeField(_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(_('更新时间'), auto_now=True)
 

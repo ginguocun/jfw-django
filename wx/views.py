@@ -4,15 +4,17 @@ import json
 import logging
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 
 from django_filters import rest_framework as filters
+from rest_framework.decorators import api_view
 
 from rest_framework.status import *
 from rest_framework.generics import ListCreateAPIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
 
 from weixin import WXAPPAPI
 
@@ -57,8 +59,15 @@ def create_user_by_openid(openid=None):
     return None
 
 
+@api_view(['GET'])
+@login_required
+def api_root(request):
+    res = dict()
+    return Response(res)
+
+
 @csrf_exempt
-@require_http_methods(["GET", "POST"])
+@api_view(["GET", "POST"])
 def wx_login(request):
     if request.method == "POST":
         if request.body:
@@ -109,7 +118,7 @@ class JfwTokenObtainPairView(TokenObtainPairView):
 
 
 class RestaurantListView(ListCreateAPIView):
-    queryset = Restaurant.objects.filter(is_available=True)
+    queryset = Restaurant.objects.filter(is_active=True)
     serializer_class = RestaurantListSerializer
     search_fields = (
         'restaurant_name', 'restaurant_code'
@@ -117,7 +126,7 @@ class RestaurantListView(ListCreateAPIView):
 
 
 class DishListView(ListCreateAPIView):
-    queryset = Dish.objects.filter(is_available=True).all()
+    queryset = Dish.objects.filter(is_active=True).all()
     serializer_class = DishListSerializer
     search_fields = (
         'dish_name', 'dish_desc'
@@ -129,7 +138,7 @@ class DishListView(ListCreateAPIView):
 
 
 class CompanyListView(ListCreateAPIView):
-    queryset = Company.objects.filter(is_available=True)
+    queryset = Company.objects.filter(is_active=True)
     serializer_class = CompanyListSerializer
     search_fields = (
         'company_name', 'company_code', 'company_address'
@@ -148,7 +157,7 @@ class OrderListFilter(WxFilter):
 
 
 class OrderListView(ListCreateAPIView):
-    queryset = Order.objects.filter(is_available=True)
+    queryset = Order.objects.filter(is_active=True)
     serializer_class = OrderListSerializer
     filterset_class = OrderListFilter
 
@@ -165,7 +174,7 @@ class OrderItemListFilter(WxFilter):
 
 
 class OrderItemListView(ListCreateAPIView):
-    queryset = OrderItem.objects.filter(is_available=True)
+    queryset = OrderItem.objects.filter(is_active=True)
     serializer_class = OrderItemListSerializer
     filterset_class = OrderItemListFilter
     search_fields = (
