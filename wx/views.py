@@ -4,21 +4,21 @@ import json
 import logging
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from django_filters import rest_framework as filters
-from rest_framework.decorators import api_view
 
-from rest_framework.status import *
+from rest_framework.decorators import api_view
 from rest_framework.generics import ListCreateAPIView
-from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
+from rest_framework.status import *
+
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from weixin import WXAPPAPI
 
-from wx.serializers import *
+from .serializers import *
+
 
 logger = logging.getLogger('django')
 
@@ -59,13 +59,6 @@ def create_user_by_openid(openid=None):
     return None
 
 
-@api_view(['GET'])
-@login_required
-def api_root(request):
-    res = dict()
-    return Response(res)
-
-
 @csrf_exempt
 @api_view(["GET", "POST"])
 def wx_login(request):
@@ -102,12 +95,12 @@ def wx_login(request):
                             is_sync = False
                             if account.nick_name:
                                 is_sync = True
-                            return JsonResponse({'jwt': str(token), 'is_sync': is_sync}, status=HTTP_200_OK)
-                        return JsonResponse({'err': '数据库连接失败'}, status=HTTP_500_INTERNAL_SERVER_ERROR)
-                    return JsonResponse({'err': '提供的数据验证失败'}, status=HTTP_400_BAD_REQUEST)
+                            return Response({'jwt': str(token), 'is_sync': is_sync}, status=HTTP_200_OK)
+                        return Response({'err': '数据库连接失败'}, status=HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({'err': '提供的数据验证失败'}, status=HTTP_400_BAD_REQUEST)
                 except Exception as err:
-                    return JsonResponse({'err': str(err)}, status=HTTP_500_INTERNAL_SERVER_ERROR)
-    return JsonResponse({'err': '访问方式不对'}, status=HTTP_400_BAD_REQUEST)
+                    return Response({'err': str(err)}, status=HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response({'err': '访问方式不对'}, status=HTTP_400_BAD_REQUEST)
 
 
 class JfwTokenObtainPairView(TokenObtainPairView):
@@ -125,24 +118,118 @@ class RestaurantListView(ListCreateAPIView):
     )
 
 
+class DishTagListFilter(WxFilter):
+
+    class Meta:
+        model = DishTag
+        fields = {
+            'tag_name': ['exact', 'contains'],
+            'is_confirmed': ['exact', 'contains'],
+            'is_active': ['exact', 'contains'],
+        }
+
+
+class DishTagListView(ListCreateAPIView):
+    """
+    get:
+    获取商品标签列表
+
+    post:
+    创建商品标签
+    """
+    queryset = DishTag.objects.filter(is_active=True).all()
+    serializer_class = DishTagListSerializer
+    search_fields = [
+        'tag_name'
+    ]
+    filterset_class = DishTagListFilter
+
+
+class DishListFilter(WxFilter):
+
+    class Meta:
+        model = Dish
+        fields = {
+            'dish_tag': ['exact'],
+            'restaurant': ['exact'],
+        }
+
+
 class DishListView(ListCreateAPIView):
+    """
+    get:
+    获取商品列表
+
+    post:
+    创建商品
+    """
     queryset = Dish.objects.filter(is_active=True).all()
     serializer_class = DishListSerializer
-    search_fields = (
+    search_fields = [
         'dish_name', 'dish_desc'
-    )
+    ]
+    filterset_class = DishListFilter
 
     def get_queryset(self):
-        queryset = self.queryset.filter(restaurant__company_related_restaurant__wx_user__id=self.request.user.id)
+        if self.request.user:
+            queryset = self.queryset.filter(restaurant__company_related_restaurant__wx_user__id=self.request.user.id)
+        else:
+            queryset = self.queryset.order_by('-pk')
         return queryset
 
 
+class CompanyListFilter(WxFilter):
+
+    class Meta:
+        model = Company
+        fields = {
+            'company_name': ['exact', 'contains'],
+            'company_code': ['exact', 'contains'],
+            'company_address': ['contains'],
+        }
+
+
 class CompanyListView(ListCreateAPIView):
+    """
+    get:
+    获取公司列表
+
+    post:
+    创建公司
+    """
     queryset = Company.objects.filter(is_active=True)
     serializer_class = CompanyListSerializer
     search_fields = (
         'company_name', 'company_code', 'company_address'
     )
+    filterset_class = CompanyListFilter
+
+
+class CompanyEmployeeListFilter(WxFilter):
+
+    class Meta:
+        model = CompanyEmployee
+        fields = {
+            'company': ['exact'],
+            'employee_name': ['exact', 'contains'],
+            'mobile': ['exact', 'contains'],
+        }
+
+
+class CompanyEmployeeListView(ListCreateAPIView):
+    """
+    get:
+    获取企业员工列表
+
+    post:
+    创建企业员工
+    """
+    queryset = CompanyEmployee.objects.filter(is_active=True)
+    serializer_class = CompanyEmployeeListSerializer
+    search_fields = (
+        'employee_name', 'mobile',
+    )
+    filterset_class = CompanyEmployeeListFilter
 
 
 class OrderListFilter(WxFilter):
@@ -157,6 +244,13 @@ class OrderListFilter(WxFilter):
 
 
 class OrderListView(ListCreateAPIView):
+    """
+    get:
+    获取订单列表
+
+    post:
+    创建订单
+    """
     queryset = Order.objects.filter(is_active=True)
     serializer_class = OrderListSerializer
     filterset_class = OrderListFilter

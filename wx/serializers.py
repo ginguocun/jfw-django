@@ -26,6 +26,13 @@ class RestaurantListSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DishTagListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = DishTag
+        fields = '__all__'
+
+
 class DishListSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -37,6 +44,13 @@ class CompanyListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Company
+        fields = '__all__'
+
+
+class CompanyEmployeeListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CompanyEmployee
         fields = '__all__'
 
 
