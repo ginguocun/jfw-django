@@ -12,7 +12,7 @@ admin.site.index_title = '金饭碗后台管理系统'
 
 class DistrictLevel(models.Model):
     level = models.CharField(
-        verbose_name=_('辖区等级'), help_text=_('辖区等级'), max_length=100, unique=True, null=True, blank=True)
+        verbose_name=_('辖区等级'), help_text=_('辖区等级'), max_length=100, unique=True, null=True)
     datetime_created = models.DateTimeField(verbose_name=_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
 
@@ -31,7 +31,7 @@ class ChinaDistrict(models.Model):
     city_code = models.CharField(
         verbose_name=_('电话区号'), help_text=_('电话区号'), max_length=100, null=True, blank=True)
     ad_code = models.CharField(verbose_name=_('辖区编号'), help_text=_('辖区编号'), max_length=100, null=True, blank=True)
-    name = models.CharField(verbose_name=_('辖区名称'), help_text=_('辖区名称'), max_length=100, null=True, blank=True)
+    name = models.CharField(verbose_name=_('辖区名称'), help_text=_('辖区名称'), max_length=100, null=True)
     center = models.CharField(verbose_name=_('中心坐标'), help_text=_('中心坐标'), max_length=100, null=True, blank=True)
     level = models.ForeignKey(
         DistrictLevel,
@@ -89,15 +89,15 @@ class UserLevel(models.Model):
 
 class Restaurant(models.Model):
     restaurant_name = models.CharField(
-        verbose_name=_('餐馆名称'), help_text=_('餐馆名称'), max_length=255, unique=True, null=True, blank=True)
+        verbose_name=_('餐馆名称'), help_text=_('餐馆名称'), max_length=255, unique=True, null=True)
     restaurant_code = models.CharField(
         verbose_name=_('餐馆识别码'), help_text=_('餐馆识别码'), max_length=255, null=True, blank=True)
     contact_person = models.CharField(
-        verbose_name=_('联系人'), help_text=_('联系人'), max_length=255, null=True, blank=True)
+        verbose_name=_('联系人'), help_text=_('联系人'), max_length=255, null=True)
     contact_mobile = models.CharField(
-        verbose_name=_('联系方式'), help_text=_('联系方式'), max_length=255, null=True, blank=True)
+        verbose_name=_('联系方式'), help_text=_('联系方式'), max_length=255, null=True)
     restaurant_address = models.TextField(
-        verbose_name=_('餐馆地址'), help_text=_('餐馆地址'), max_length=2000, null=True, blank=True)
+        verbose_name=_('餐馆地址'), help_text=_('餐馆地址'), max_length=2000, null=True)
     center = models.CharField(
         verbose_name=_('中心坐标'), help_text=_('中心坐标'), max_length=255, null=True, blank=True)
     created_by = models.ForeignKey(
@@ -139,7 +139,7 @@ class Restaurant(models.Model):
 
 class DishTag(models.Model):
     tag_name = models.CharField(
-        verbose_name=_('标签'), help_text=_('标签'), max_length=255, null=True, blank=True, unique=True)
+        verbose_name=_('标签'), help_text=_('标签'), max_length=255, null=True, unique=True)
     created_by = models.ForeignKey(
         "WxUser",
         null=True,
@@ -178,7 +178,7 @@ class DishTag(models.Model):
 
 class Dish(models.Model):
     dish_name = models.CharField(
-        verbose_name=_('商品名称'), help_text=_('商品名称'), max_length=255, null=True, blank=True)
+        verbose_name=_('商品名称'), help_text=_('商品名称'), max_length=255, null=True)
     dish_image_0 = models.ImageField(
         verbose_name=_('主照片'), help_text=_('主照片'), upload_to='dish/', null=True, blank=True)
     dish_image_1 = models.ImageField(
@@ -194,7 +194,6 @@ class Dish(models.Model):
     restaurant = models.ForeignKey(
         Restaurant,
         null=True,
-        blank=True,
         on_delete=models.SET_NULL,
         verbose_name=_('餐馆'),
         help_text=_('餐馆'),
@@ -224,15 +223,19 @@ class Dish(models.Model):
 
 class Company(models.Model):
     """
-    公司列表，通常由管理员进行后台添加，游客用户也可以自行创建，由管理员进行审核；
-    公司的管理员有权限更新 restaurant 信息，一个公司有多个管理员；
+    企业列表，通常由管理员进行后台添加，游客用户也可以自行创建，由管理员进行审核；
+    企业的管理员有权限更新 restaurant 信息，一个企业有多个管理员；
     """
     company_name = models.CharField(
-        verbose_name=_('企业名称'), help_text=_('企业名称'), max_length=255, unique=True, null=True, blank=True)
+        verbose_name=_('企业名称'), help_text=_('企业名称'), max_length=255, unique=True, null=True)
     company_code = models.CharField(
         verbose_name=_('企业识别码'), help_text=_('企业识别码'), max_length=255, unique=True, null=True, blank=True)
     company_address = models.TextField(
-        verbose_name=_('企业地址'), help_text=_('企业地址'), max_length=2000, null=True, blank=True)
+        verbose_name=_('企业地址'), help_text=_('企业地址'), max_length=2000, null=True)
+    contact_person = models.CharField(
+        verbose_name=_('联系人'), help_text=_('联系人'), max_length=255, null=True)
+    contact_mobile = models.CharField(
+        verbose_name=_('联系方式'), help_text=_('联系方式'), max_length=255, null=True)
     center = models.CharField(
         verbose_name=_('中心坐标'), help_text=_('中心坐标'), max_length=255, null=True, blank=True)
     deliver_time_0 = models.TimeField(
@@ -293,7 +296,7 @@ class WxUser(AbstractUser):
     """
     用户列表
     如果用户有 company 关联信息，用户可以进行订餐；
-    如果用户有 company 关联信息，并且 is_manager 是 True，用户可以统计公司的订单，审核和管理公司员工名单 CompanyEmployee；
+    如果用户有 company 关联信息，并且 is_manager 是 True，用户可以统计企业的订单，审核和管理企业员工名单 CompanyEmployee；
     """
     # 微信同步的用户信息
     openid = models.CharField(
@@ -338,8 +341,8 @@ class WxUser(AbstractUser):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name=_('公司'),
-        help_text=_('公司'),
+        verbose_name=_('企业'),
+        help_text=_('企业'),
         related_name='wx_user'
     )
     restaurant = models.ForeignKey(
@@ -371,18 +374,18 @@ class WxUser(AbstractUser):
 class CompanyEmployee(models.Model):
     """
     企业员工列表，员工必须在此表内，并且 is_confirmed 和 is_active 同时为 True，才允许进行自行注册通过；
-    如果员工没有在此表内，员工可以自行提交，公司管理员进行审核，审核通过以后员工与公司在 WxUser 进行关联；
+    如果员工没有在此表内，员工可以自行提交，企业管理员进行审核，审核通过以后员工与企业在 WxUser 进行关联；
     """
     company = models.ForeignKey(
         Company,
         null=True,
-        blank=True,
         on_delete=models.SET_NULL,
-        verbose_name=_('公司'),
+        verbose_name=_('企业'),
+        help_text=_('企业'),
     )
-    employee_name = models.CharField(verbose_name=_('姓名'), help_text=_('姓名'), max_length=200, null=True, blank=True)
+    employee_name = models.CharField(verbose_name=_('姓名'), help_text=_('姓名'), max_length=200, null=True)
     mobile = models.CharField(
-        verbose_name=_('手机号'), help_text=_('手机号'), max_length=20, null=True, blank=True, unique=True)
+        verbose_name=_('手机号'), help_text=_('手机号'), max_length=20, null=True, unique=True)
     user = models.ForeignKey(
         WxUser,
         null=True,
@@ -434,7 +437,7 @@ class Order(models.Model):
     order_code = models.CharField(
         verbose_name=_('订单编号'), help_text=_('订单编号'), max_length=255, unique=True, null=True, blank=True)
     order_date = models.DateField(
-        verbose_name=_('订单日期'), help_text=_('订单日期'), null=True, blank=True)
+        verbose_name=_('订单日期'), help_text=_('订单日期'), null=True)
     order_type = models.IntegerField(
         verbose_name=_('订餐类型'),
         help_text=_("订餐类型 (0-->早餐, 1-->午餐, 2-->下午茶, 3-->晚餐, 4-->夜宵, 5-->其他)"),
@@ -455,7 +458,6 @@ class Order(models.Model):
     restaurant = models.ForeignKey(
         Restaurant,
         null=True,
-        blank=True,
         on_delete=models.SET_NULL,
         verbose_name=_('餐馆'),
         help_text=_('餐馆'),
@@ -463,7 +465,6 @@ class Order(models.Model):
     client = models.ForeignKey(
         WxUser,
         null=True,
-        blank=True,
         on_delete=models.SET_NULL,
         verbose_name=_('用户'),
         help_text=_('用户'),
@@ -491,18 +492,16 @@ class OrderItem(models.Model):
     order = models.ForeignKey(
         Order,
         null=True,
-        blank=True,
         on_delete=models.SET_NULL,
         verbose_name=_('订单'), help_text=_('订单'),
     )
     dish = models.ForeignKey(
         Dish,
         null=True,
-        blank=True,
         on_delete=models.SET_NULL,
         verbose_name=_('商品'), help_text=_('商品'),
     )
-    item_count = models.IntegerField(verbose_name=_('数量'), help_text=_('数量'), null=True, blank=True)
+    item_count = models.IntegerField(verbose_name=_('数量'), help_text=_('数量'), null=True, default=1)
     marked_price = models.DecimalField(
         verbose_name=_('标价'), help_text=_('标价'), null=True, blank=True, decimal_places=2, max_digits=9)
     payed_unit_price = models.DecimalField(
