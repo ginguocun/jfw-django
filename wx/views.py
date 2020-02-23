@@ -4,6 +4,7 @@ import json
 import logging
 
 from django.conf import settings
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 
 from django_filters import rest_framework as filters
@@ -57,6 +58,12 @@ def create_user_by_openid(openid=None):
         account = WxUser.objects.create(openid=openid, **user_info)
         return account
     return None
+
+
+@api_view(["GET"])
+def api_root(request):
+    urls = {'admin': '/admin/', 'api': '/api/'}
+    return Response(urls)
 
 
 @csrf_exempt
@@ -163,6 +170,7 @@ class DishListView(ListCreateAPIView):
     post:
     创建商品
     """
+    permission_classes = []
     queryset = Dish.objects.filter(is_active=True).all()
     serializer_class = DishListSerializer
     search_fields = [
@@ -171,7 +179,7 @@ class DishListView(ListCreateAPIView):
     filterset_class = DishListFilter
 
     def get_queryset(self):
-        if self.request.user:
+        if self.request.user.id:
             queryset = self.queryset.filter(restaurant__company_related_restaurant__wx_user__id=self.request.user.id)
         else:
             queryset = self.queryset.order_by('-pk')

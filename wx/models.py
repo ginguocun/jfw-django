@@ -204,6 +204,24 @@ class Dish(models.Model):
         verbose_name=_('标签'),
         help_text=_('标签'),
     )
+    created_by = models.ForeignKey(
+        "WxUser",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='dish_created_by',
+        verbose_name=_('创建人员'),
+        help_text=_('创建人员'),
+    )
+    confirmed_by = models.ForeignKey(
+        "WxUser",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='dish_confirmed_by',
+        verbose_name=_('审核人员'),
+        help_text=_('审核人员'),
+    )
     is_active = models.BooleanField(verbose_name=_('是否有效'), help_text=_('是否有效'), default=True)
     datetime_created = models.DateTimeField(verbose_name=_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
