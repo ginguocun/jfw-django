@@ -5,6 +5,21 @@ from django.utils.translation import gettext_lazy as _
 from wx.models import *
 
 
+class AutoUpdateUserModelAdmin(admin.ModelAdmin):
+    readonly_fields = ('created_by', 'confirmed_by')
+    date_hierarchy = 'datetime_created'
+
+    def save_model(self, request, instance, form, change):
+        user = request.user
+        instance = form.save(commit=False)
+        if not change or not instance.created_by:
+            instance.created_by = user
+        instance.confirmed_by = user
+        instance.save()
+        form.save_m2m()
+        return instance
+
+
 @admin.register(DistrictLevel)
 class DistrictLevelAdmin(admin.ModelAdmin):
     list_display = ['pk', 'level']
@@ -23,6 +38,20 @@ class UserLevelAdmin(admin.ModelAdmin):
     search_fields = ['level_code', 'level_name', 'level_desc']
 
 
+@admin.register(Restaurant)
+class RestaurantAdmin(AutoUpdateUserModelAdmin):
+    list_display = [
+        'pk', 'restaurant_name', 'restaurant_code', 'contact_person', 'contact_mobile', 'restaurant_address',
+        'is_active', 'created_by', 'confirmed_by']
+    search_fields = ['restaurant_name', 'restaurant_code', 'contact_person', 'contact_mobile']
+
+
+@admin.register(DishTag)
+class DishTagAdmin(AutoUpdateUserModelAdmin):
+    list_display = ['pk', 'tag_name', 'is_confirmed', 'is_active', 'created_by', 'confirmed_by']
+    search_fields = ['tag_name']
+
+
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):
     list_display = ['pk', 'dish_name', 'dish_desc', 'dish_price']
@@ -30,9 +59,15 @@ class DishAdmin(admin.ModelAdmin):
 
 
 @admin.register(Company)
-class CompanyAdmin(admin.ModelAdmin):
+class CompanyAdmin(AutoUpdateUserModelAdmin):
     list_display = ['pk', 'company_name', 'company_code', 'company_address']
     search_fields = ['company_name', 'company_code', 'company_address']
+
+
+@admin.register(CompanyEmployee)
+class CompanyEmployeeAdmin(AutoUpdateUserModelAdmin):
+    list_display = ['pk', 'company', 'employee_name', 'mobile', 'user']
+    search_fields = ['employee_name', 'mobile']
 
 
 @admin.register(WxUser)
