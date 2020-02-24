@@ -64,6 +64,7 @@ class DishAdmin(AutoUpdateUserModelAdmin):
 class CompanyAdmin(AutoUpdateUserModelAdmin):
     list_display = ['pk', 'company_name', 'company_code', 'company_address']
     search_fields = ['company_name', 'company_code', 'company_address']
+    filter_horizontal = ('restaurant',)
 
 
 @admin.register(CompanyEmployee)
