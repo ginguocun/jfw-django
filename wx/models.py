@@ -222,6 +222,9 @@ class Dish(models.Model):
         verbose_name=_('审核人员'),
         help_text=_('审核人员'),
     )
+    sales_count = models.BigIntegerField(verbose_name=_('销售数量'), help_text=_('销售数量'), null=True, default=0)
+    rate_count = models.BigIntegerField(verbose_name=_('点评数量'), help_text=_('点评数量'), null=True, default=0)
+    rate_score = models.FloatField(verbose_name=_('评分'), help_text=_('评分'), null=True, blank=True)
     is_active = models.BooleanField(verbose_name=_('是否有效'), help_text=_('是否有效'), default=True)
     datetime_created = models.DateTimeField(verbose_name=_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
