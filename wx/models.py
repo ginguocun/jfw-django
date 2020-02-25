@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from jfw.utils import rsa_encrypt, rsa_decrypt
 
 role_choices = [(0, '游客'), (1, '客户'), (2, '商家')]
 admin.site.site_header = '金饭碗后台管理系统'
@@ -177,19 +178,19 @@ class DishTag(models.Model):
 
 
 class Dish(models.Model):
-    dish_name = models.CharField(
+    title = models.CharField(
         verbose_name=_('商品名称'), help_text=_('商品名称'), max_length=255, null=True)
-    dish_image_0 = models.ImageField(
+    image = models.ImageField(
         verbose_name=_('主照片'), help_text=_('主照片'), upload_to='dish/', null=True, blank=True)
-    dish_image_1 = models.ImageField(
-        verbose_name=_('照片1'), help_text=_('照片1'), upload_to='dish/', null=True, blank=True)
-    dish_image_2 = models.ImageField(
+    image2 = models.ImageField(
         verbose_name=_('照片2'), help_text=_('照片2'), upload_to='dish/', null=True, blank=True)
-    dish_image_3 = models.ImageField(
+    image3 = models.ImageField(
         verbose_name=_('照片3'), help_text=_('照片3'), upload_to='dish/', null=True, blank=True)
+    dish4 = models.ImageField(
+        verbose_name=_('照片4'), help_text=_('照片4'), upload_to='dish/', null=True, blank=True)
     dish_desc = models.TextField(
         verbose_name=_('菜品描述'), help_text=_('菜品描述'), max_length=2000, null=True, blank=True)
-    dish_price = models.DecimalField(
+    price = models.DecimalField(
         verbose_name=_('商品价格'), help_text=_('商品价格'), null=True, decimal_places=2, max_digits=9, default=18.00)
     restaurant = models.ForeignKey(
         Restaurant,
@@ -222,7 +223,7 @@ class Dish(models.Model):
         verbose_name=_('审核人员'),
         help_text=_('审核人员'),
     )
-    sales_count = models.BigIntegerField(verbose_name=_('销售数量'), help_text=_('销售数量'), null=True, default=0)
+    sales = models.BigIntegerField(verbose_name=_('销售数量'), help_text=_('销售数量'), null=True, default=0)
     rate_count = models.BigIntegerField(verbose_name=_('点评数量'), help_text=_('点评数量'), null=True, default=0)
     rate_score = models.FloatField(verbose_name=_('评分'), help_text=_('评分'), null=True, blank=True)
     is_active = models.BooleanField(verbose_name=_('是否有效'), help_text=_('是否有效'), default=True)
@@ -238,7 +239,7 @@ class Dish(models.Model):
 
     def __str__(self):
         return "{0}".format(
-            self.dish_name,
+            self.title,
         )
 
 
@@ -339,8 +340,7 @@ class WxUser(AbstractUser):
 
     date_of_birth = models.DateField(verbose_name=_('出生日期'), help_text=_('出生日期'), null=True, blank=True)
     desc = models.TextField(verbose_name=_('描述'), help_text=_('描述'), max_length=2000, null=True, blank=True)
-    mobile = models.CharField(
-        verbose_name=_('手机号'), help_text=_('手机号'), max_length=100, null=True, blank=True, unique=True)
+    mobile = models.CharField(verbose_name=_('手机号'), max_length=255, null=True, blank=True, unique=True)
     user_level = models.ForeignKey(
         UserLevel,
         null=True,
@@ -382,6 +382,17 @@ class WxUser(AbstractUser):
     datetime_created = models.DateTimeField(verbose_name=_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
 
+    def _get_mobile(self):
+        if self.mobile:
+            return rsa_decrypt(self.mobile)
+        else:
+            return None
+
+    def _set_mobile(self, mobile):
+        self.mobile = rsa_encrypt(mobile)
+
+    mb = property(_get_mobile, _set_mobile)
+
     class Meta(AbstractUser.Meta):
         swappable = 'AUTH_USER_MODEL'
 
@@ -405,8 +416,8 @@ class CompanyEmployee(models.Model):
         help_text=_('企业'),
     )
     employee_name = models.CharField(verbose_name=_('姓名'), help_text=_('姓名'), max_length=200, null=True)
-    mobile = models.CharField(
-        verbose_name=_('手机号'), help_text=_('手机号'), max_length=20, null=True, unique=True)
+    employee_code = models.CharField(verbose_name=_('编号'), help_text=_('编号'), max_length=200, null=True)
+    mobile = models.CharField(verbose_name=_('手机号'), max_length=255, null=True, blank=True, unique=True)
     user = models.ForeignKey(
         WxUser,
         null=True,
@@ -441,16 +452,27 @@ class CompanyEmployee(models.Model):
 
     objects = models.Manager()
 
+    def _get_mobile(self):
+        if self.mobile:
+            return rsa_decrypt(self.mobile)
+        else:
+            return None
+
+    def _set_mobile(self, mobile):
+        self.mobile = rsa_encrypt(mobile)
+
+    mb = property(_get_mobile, _set_mobile)
+
     class Meta:
         ordering = ['id']
-        unique_together = ('company', 'employee_name', 'mobile')
+        unique_together = ('company', 'employee_name', 'employee_code')
         verbose_name = _('企业员工名单')
         verbose_name_plural = _('企业员工名单')
 
     def __str__(self):
         return "{0} {1}".format(
             self.employee_name,
-            self.mobile,
+            self.employee_code,
         )
 
 

@@ -271,7 +271,7 @@ class OrderItemListFilter(WxFilter):
         fields = {
             'order': ['exact'],
             'dish': ['exact'],
-            'dish__dish_name': ['exact', 'contains']
+            'dish__title': ['exact', 'contains']
         }
 
 
@@ -280,5 +280,5 @@ class OrderItemListView(ListCreateAPIView):
     serializer_class = OrderItemListSerializer
     filterset_class = OrderItemListFilter
     search_fields = (
-        'dish__dish_name', 'order_code'
+        'dish__title', 'order_code'
     )

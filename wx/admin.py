@@ -54,8 +54,8 @@ class DishTagAdmin(AutoUpdateUserModelAdmin):
 
 @admin.register(Dish)
 class DishAdmin(AutoUpdateUserModelAdmin):
-    list_display = ['pk', 'dish_name', 'dish_desc', 'dish_price']
-    search_fields = ['dish_name', 'dish_desc']
+    list_display = ['pk', 'title', 'dish_desc', 'price', 'sales']
+    search_fields = ['title', 'dish_desc']
     autocomplete_fields = ('restaurant',)
     list_filter = ('dish_tag', 'restaurant')
 
@@ -69,15 +69,16 @@ class CompanyAdmin(AutoUpdateUserModelAdmin):
 
 @admin.register(CompanyEmployee)
 class CompanyEmployeeAdmin(AutoUpdateUserModelAdmin):
+    readonly_fields = ('mobile',)
     list_display = ['pk', 'company', 'employee_name', 'mobile', 'user']
     search_fields = ['employee_name', 'mobile']
 
 
 @admin.register(WxUser)
 class WxUserAdmin(UserAdmin):
-    readonly_fields = ('last_login', 'date_joined')
+    readonly_fields = ('last_login', 'date_joined', 'mobile')
     search_fields = [
-        'username', 'openid', 'mobile', 'email', 'first_name', 'last_name', 'nick_name', 'company__company_name']
+        'username', 'openid', 'email', 'mobile', 'first_name', 'last_name', 'nick_name', 'company__company_name']
     list_filter = ['is_owner', 'is_client', 'is_manager']
     autocomplete_fields = ['company', 'china_district', 'user_level']
     fieldsets = (
