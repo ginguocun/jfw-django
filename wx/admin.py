@@ -70,8 +70,8 @@ class CompanyAdmin(AutoUpdateUserModelAdmin):
 @admin.register(CompanyEmployee)
 class CompanyEmployeeAdmin(AutoUpdateUserModelAdmin):
     readonly_fields = ('mobile',)
-    list_display = ['pk', 'company', 'employee_name', 'mobile', 'user']
-    search_fields = ['employee_name', 'mobile']
+    list_display = ['pk', 'company', 'employee_name', 'employee_code', 'user']
+    search_fields = ['company__company_name', 'employee_name', 'employee_code']
 
 
 @admin.register(WxUser)
