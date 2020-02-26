@@ -4,6 +4,10 @@ from django.utils.translation import gettext_lazy as _
 
 from wx.models import *
 
+admin.site.site_header = '金饭碗后台管理系统'
+admin.site.site_title = '金饭碗'
+admin.site.index_title = '金饭碗后台管理系统'
+
 
 class AutoUpdateUserModelAdmin(admin.ModelAdmin):
     readonly_fields = ('created_by', 'confirmed_by')
@@ -65,27 +69,35 @@ class CompanyAdmin(AutoUpdateUserModelAdmin):
     list_display = ['pk', 'company_name', 'company_code', 'company_address']
     search_fields = ['company_name', 'company_code', 'company_address']
     filter_horizontal = ('restaurant',)
+    list_filter = ['is_confirmed', 'is_active']
 
 
 @admin.register(CompanyEmployee)
 class CompanyEmployeeAdmin(AutoUpdateUserModelAdmin):
-    readonly_fields = ('mobile',)
+    readonly_fields = ('mobile_data', 'mobile_index', 'created_by', 'confirmed_by')
     list_display = ['pk', 'company', 'employee_name', 'employee_code', 'user']
-    search_fields = ['company__company_name', 'employee_name', 'employee_code']
+    search_fields = ['company__company_name', 'employee_name', 'employee_code', 'mobile_index']
+    autocomplete_fields = ['company', 'user']
+    list_filter = ['is_confirmed', 'is_active']
+
+    fieldsets = (
+        (_('基础信息'), {'fields': ('company', 'employee_name', 'employee_code', 'mobile_index', 'user')}),
+        (_('状态信息'), {'fields': ('is_confirmed', 'is_active', 'created_by', 'confirmed_by')}),
+    )
 
 
 @admin.register(WxUser)
 class WxUserAdmin(UserAdmin):
-    readonly_fields = ('last_login', 'date_joined', 'mobile')
+    readonly_fields = ('last_login', 'date_joined', 'mobile_data', 'mobile_index')
     search_fields = [
-        'username', 'openid', 'email', 'mobile', 'first_name', 'last_name', 'nick_name', 'company__company_name']
+        'username', 'openid', 'email', 'mobile_index', 'first_name', 'last_name', 'nick_name', 'company__company_name']
     list_filter = ['is_owner', 'is_client', 'is_manager']
     autocomplete_fields = ['company', 'china_district', 'user_level']
     fieldsets = (
         (_('基础信息'), {'fields': ('username', 'password', 'openid')}),
         (_('个人信息'), {'fields': (
             'nick_name', 'first_name', 'last_name', 'avatar_url', 'gender', 'date_of_birth', 'desc')}),
-        (_('联络信息'), {'fields': ('mobile', 'email',)}),
+        (_('联络信息'), {'fields': ('mobile_index', 'email',)}),
         (_('角色信息'), {'fields': ('is_owner', 'is_client', 'is_manager')}),
         (_('地址信息'), {'fields': ('city', 'province', 'country', 'china_district')}),
         (_('分类信息'), {'fields': ('user_level', 'company')}),

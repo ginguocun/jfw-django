@@ -4,7 +4,6 @@ import json
 import logging
 
 from django.conf import settings
-from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 
 from django_filters import rest_framework as filters
@@ -220,7 +219,7 @@ class CompanyEmployeeListFilter(WxFilter):
         fields = {
             'company': ['exact'],
             'employee_name': ['exact', 'contains'],
-            'mobile': ['exact', 'contains'],
+            'mobile_index': ['exact'],
         }
 
 
@@ -235,7 +234,7 @@ class CompanyEmployeeListView(ListCreateAPIView):
     queryset = CompanyEmployee.objects.filter(is_active=True)
     serializer_class = CompanyEmployeeListSerializer
     search_fields = (
-        'employee_name', 'mobile',
+        'employee_name', 'mobile_index',
     )
     filterset_class = CompanyEmployeeListFilter
 

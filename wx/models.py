@@ -1,14 +1,11 @@
-from django.contrib import admin
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from jfw.utils import rsa_encrypt, rsa_decrypt
+from jfw.utils import rsa_encrypt, rsa_decrypt, pbkdf2_hmac_encrypt
+
 
 role_choices = [(0, '游客'), (1, '客户'), (2, '商家')]
-admin.site.site_header = '金饭碗后台管理系统'
-admin.site.site_title = '金饭碗'
-admin.site.index_title = '金饭碗后台管理系统'
 
 
 class DistrictLevel(models.Model):
@@ -340,7 +337,8 @@ class WxUser(AbstractUser):
 
     date_of_birth = models.DateField(verbose_name=_('出生日期'), help_text=_('出生日期'), null=True, blank=True)
     desc = models.TextField(verbose_name=_('描述'), help_text=_('描述'), max_length=2000, null=True, blank=True)
-    mobile = models.CharField(verbose_name=_('手机号'), max_length=255, null=True, blank=True, unique=True)
+    mobile_data = models.TextField(verbose_name=_('手机号-数据'), max_length=2000, null=True, blank=True)
+    mobile_index = models.TextField(verbose_name=_('手机号-索引'), max_length=2000, null=True, blank=True, unique=True)
     user_level = models.ForeignKey(
         UserLevel,
         null=True,
@@ -383,15 +381,16 @@ class WxUser(AbstractUser):
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
 
     def _get_mobile(self):
-        if self.mobile:
-            return rsa_decrypt(self.mobile)
+        if self.mobile_data:
+            return rsa_decrypt(self.mobile_data)
         else:
             return None
 
     def _set_mobile(self, mobile):
-        self.mobile = rsa_encrypt(mobile)
+        self.mobile_data = rsa_encrypt(mobile)
+        self.mobile_index = pbkdf2_hmac_encrypt(mobile)
 
-    mb = property(_get_mobile, _set_mobile)
+    mobile = property(_get_mobile, _set_mobile)
 
     class Meta(AbstractUser.Meta):
         swappable = 'AUTH_USER_MODEL'
@@ -417,7 +416,8 @@ class CompanyEmployee(models.Model):
     )
     employee_name = models.CharField(verbose_name=_('姓名'), help_text=_('姓名'), max_length=200, null=True)
     employee_code = models.CharField(verbose_name=_('编号'), help_text=_('编号'), max_length=200, null=True)
-    mobile = models.CharField(verbose_name=_('手机号'), max_length=255, null=True, blank=True, unique=True)
+    mobile_data = models.TextField(verbose_name=_('手机号-数据'), max_length=2000, null=True, blank=True)
+    mobile_index = models.TextField(verbose_name=_('手机号-索引'), max_length=2000, null=True, blank=True, unique=True)
     user = models.ForeignKey(
         WxUser,
         null=True,
@@ -453,15 +453,16 @@ class CompanyEmployee(models.Model):
     objects = models.Manager()
 
     def _get_mobile(self):
-        if self.mobile:
-            return rsa_decrypt(self.mobile)
+        if self.mobile_data:
+            return rsa_decrypt(self.mobile_data)
         else:
             return None
 
     def _set_mobile(self, mobile):
-        self.mobile = rsa_encrypt(mobile)
+        self.mobile_data = rsa_encrypt(mobile)
+        self.mobile_index = pbkdf2_hmac_encrypt(mobile)
 
-    mb = property(_get_mobile, _set_mobile)
+    mobile = property(_get_mobile, _set_mobile)
 
     class Meta:
         ordering = ['id']
@@ -551,6 +552,10 @@ class OrderItem(models.Model):
         verbose_name=_('单价'), help_text=_('单价'), null=True, blank=True, decimal_places=2, max_digits=9)
     payed_total_price = models.DecimalField(
         verbose_name=_('小计'), help_text=_('小计'), null=True, blank=True, decimal_places=2, max_digits=9)
+    # 点评数据
+    rate_score = models.IntegerField(verbose_name=_('评分'), help_text=_('评分'), null=True, blank=True)
+    rate_notes = models.TextField(verbose_name=_('点评'), help_text=_('点评'), null=True, blank=True)
+    is_rated = models.BooleanField(verbose_name=_('已经点评'), help_text=_('已经点评'), default=True)
     is_active = models.BooleanField(verbose_name=_('是否有效'), help_text=_('是否有效'), default=True)
     datetime_created = models.DateTimeField(verbose_name=_('记录时间'), auto_now_add=True)
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
