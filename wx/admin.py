@@ -61,7 +61,8 @@ class DishAdmin(AutoUpdateUserModelAdmin):
     list_display = ['pk', 'title', 'dish_desc', 'price', 'sales']
     search_fields = ['title', 'dish_desc']
     autocomplete_fields = ('restaurant',)
-    list_filter = ('dish_tag', 'restaurant')
+    list_filter = ('restaurant',)
+    filter_horizontal = ('dish_tag',)
 
 
 @admin.register(Company)

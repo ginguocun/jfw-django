@@ -2,3 +2,4 @@
 db.sqlite3
 private.pem
 public.pem
+/media/*

@@ -10,14 +10,20 @@ from rest_framework.response import Response
 
 
 class NormalResultsSetPagination(PageNumberPagination):
-    page_size = 10
+    page_size = 3
     page_size_query_param = 'page_size'
     max_page_size = 100
 
     def get_paginated_response(self, data):
+        if not self.page.has_next():
+            next_page = None
+        else:
+            next_page = self.page.next_page_number()
         return Response({
             'next': self.get_next_link(),
             'previous': self.get_previous_link(),
+            'next_page': next_page,
+            'length': len(data),
             'count': self.page.paginator.count,
             'page': self.page.number,
             'num_pages': self.page.paginator.num_pages,

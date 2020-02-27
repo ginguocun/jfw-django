@@ -178,7 +178,7 @@ class Dish(models.Model):
     title = models.CharField(
         verbose_name=_('商品名称'), help_text=_('商品名称'), max_length=255, null=True)
     image = models.ImageField(
-        verbose_name=_('主照片'), help_text=_('主照片'), upload_to='dish/', null=True, blank=True)
+        verbose_name=_('主照片'), help_text=_('主照片'), upload_to='dish/', null=True)
     image2 = models.ImageField(
         verbose_name=_('照片2'), help_text=_('照片2'), upload_to='dish/', null=True, blank=True)
     image3 = models.ImageField(
