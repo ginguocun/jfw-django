@@ -21,8 +21,9 @@ urlpatterns = [
 
 
 urlpatterns += [
-    # url(r'^{0}(?P<path>.*)$'.format(settings.STATIC_URL[1:]),
-    #     static_serve, {'document_root': settings.STATIC_ROOT}, name='static'),
+    re_path(
+        r'^{0}(?P<path>.*)$'.format(settings.STATIC_URL[1:]),
+        serve, {'document_root': settings.STATIC_ROOT}, name='static'),
     re_path(
         r'^{0}(?P<path>.*)$'.format(settings.MEDIA_URL[1:]),
         serve, {'document_root': settings.MEDIA_ROOT}, name='media'),
