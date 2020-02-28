@@ -9,6 +9,10 @@ admin.site.site_title = '金饭碗'
 admin.site.index_title = '金饭碗后台管理系统'
 
 
+class GeneralModelAdmin(admin.ModelAdmin):
+    date_hierarchy = 'datetime_created'
+
+
 class AutoUpdateUserModelAdmin(admin.ModelAdmin):
     readonly_fields = ('created_by', 'confirmed_by')
     date_hierarchy = 'datetime_created'
@@ -25,19 +29,19 @@ class AutoUpdateUserModelAdmin(admin.ModelAdmin):
 
 
 @admin.register(DistrictLevel)
-class DistrictLevelAdmin(admin.ModelAdmin):
+class DistrictLevelAdmin(GeneralModelAdmin):
     list_display = ['pk', 'level']
     search_fields = ['level']
 
 
 @admin.register(ChinaDistrict)
-class ChinaDistrictAdmin(admin.ModelAdmin):
+class ChinaDistrictAdmin(GeneralModelAdmin):
     list_display = ['pk', 'city_code', 'ad_code', 'name']
     search_fields = ['city_code', 'ad_code', 'name']
 
 
 @admin.register(UserLevel)
-class UserLevelAdmin(admin.ModelAdmin):
+class UserLevelAdmin(GeneralModelAdmin):
     list_display = ['pk', 'level_code', 'level_name', 'level_desc']
     search_fields = ['level_code', 'level_name', 'level_desc']
 
@@ -58,10 +62,10 @@ class DishTagAdmin(AutoUpdateUserModelAdmin):
 
 @admin.register(Dish)
 class DishAdmin(AutoUpdateUserModelAdmin):
-    list_display = ['pk', 'title', 'dish_desc', 'price', 'sales']
+    list_display = ['pk', 'title', 'dish_desc', 'tags', 'price', 'sales', 'rate_count', 'rate_score', 'is_active']
     search_fields = ['title', 'dish_desc']
     autocomplete_fields = ('restaurant',)
-    list_filter = ('restaurant',)
+    list_filter = ('restaurant', 'dish_tag', 'is_active')
     filter_horizontal = ('dish_tag',)
 
 
@@ -106,12 +110,25 @@ class WxUserAdmin(UserAdmin):
     )
 
 
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    exclude = ['rate_notes', 'is_rated']
+    autocomplete_fields = ['dish']
+
+
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
-    list_display = ['pk', 'order_code', 'order_date', 'total_price']
-    search_fields = ['order_code']
+class OrderAdmin(GeneralModelAdmin):
+    date_hierarchy = 'order_date'
+    list_display_links = ['pk', 'order_code']
+    list_display = ['pk', 'order_code', 'order_date', 'deliver_time', 'total_marked_price', 'total_price', 'order_type']
+    list_filter = ['order_type', 'order_date']
+    search_fields = ['order_code', 'restaurant__restaurant_name', 'client__nick_name']
+    inlines = [OrderItemInline]
 
 
 @admin.register(OrderItem)
-class OrderItemAdmin(admin.ModelAdmin):
+class OrderItemAdmin(GeneralModelAdmin):
     list_display = ['pk', 'order', 'dish', 'item_count', 'payed_total_price', 'is_active']
+    search_fields = ['dish__title', 'order__order_code']
+    list_filter = ['is_active']

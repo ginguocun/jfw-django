@@ -1,6 +1,10 @@
+import random
+from datetime import datetime
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 from jfw.utils import rsa_encrypt, rsa_decrypt, pbkdf2_hmac_encrypt
 
@@ -228,6 +232,13 @@ class Dish(models.Model):
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
 
     objects = models.Manager()
+
+    @property
+    def tags(self):
+        res = []
+        for t in self.dish_tag.all():
+            res.append(t.tag_name)
+        return ', '.join(res)
 
     class Meta:
         ordering = ['id']
@@ -531,13 +542,49 @@ class Order(models.Model):
             self.order_code
         )
 
+    def generate_order_code(self):
+        pre_orders = Order.objects.filter(datetime_created__gte=datetime.today())
+        if self.pk:
+            pre_orders = pre_orders.exclude(pk=self.pk)
+        pre_count = pre_orders.count() + 1
+        res = '{}{}'.format(
+            datetime.now().strftime('%Y%m%d%H%M%S'),
+            '{}'.format(pre_count).zfill(6)
+        )
+        return res
+
+    def calculate(self):
+        total_marked_price = 0
+        total_price = 0
+        item_count = 0
+        order_items = getattr(self, 'order_items')
+        if order_items.exists():
+            for item in order_items.all():
+                total_marked_price += float(item.dish.price)
+                total_price += float(item.payed_total_price)
+                item_count += float(item.item_count)
+        self.total_marked_price = total_marked_price
+        self.total_price = total_price
+        self.total_discount = total_marked_price - total_price
+        self.save()
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if not self.order_code:
+            self.order_code = self.generate_order_code()
+        super(Order, self).save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields)
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
         Order,
         null=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         verbose_name=_('订单'), help_text=_('订单'),
+        related_name='order_items'
     )
     dish = models.ForeignKey(
         Dish,
@@ -571,4 +618,19 @@ class OrderItem(models.Model):
         return "{0} {1}".format(
             self.order,
             self.dish
+        )
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        if self.dish:
+            if not self.marked_price:
+                self.marked_price = getattr(self, 'dish').price
+            if not self.payed_unit_price:
+                self.payed_unit_price = self.marked_price
+            self.payed_total_price = float(getattr(self, 'payed_unit_price')) * int(getattr(self, 'item_count'))
+        super(OrderItem, self).save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields
         )
