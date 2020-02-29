@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django_filters import rest_framework as filters
@@ -75,6 +76,8 @@ class WxLoginView(APIView):
         code = request.data.get('code')
         logger.info("Code: {0}".format(code))
         user_info_raw = request.data.get('user_info', {})
+        if isinstance(user_info_raw, str):
+            user_info_raw = json.loads(user_info_raw)
         logger.info("user_info: {0}".format(user_info_raw))
         if code:
             api = WXAPPAPI(appid=settings.WX_APP_ID, app_secret=settings.WX_APP_SECRET)
