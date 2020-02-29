@@ -72,14 +72,17 @@ def wx_login(request):
         if request.body:
             received_data = json.loads(request.body.decode('utf-8'))
             code = received_data.get('code', None)
+            print('code', code)
             logger.info("Code: {0}".format(code))
             user_info = received_data.get('user_info', None)
+            print('user_info', user_info)
             logger.info("user_info: {0}".format(user_info))
             if code:
                 api = WXAPPAPI(appid=settings.WX_APP_ID, app_secret=settings.WX_APP_SECRET)
                 try:
                     session_info = api.exchange_code_for_session_key(code=code)
                     openid = session_info.get('openid', None)
+                    print('openid', openid)
                     if openid:
                         queryset = WxUser.objects.filter(openid=openid)
                         if queryset.exists():
@@ -88,6 +91,7 @@ def wx_login(request):
                             account = create_user_by_openid(openid=openid)
                         if account:
                             if user_info:
+                                print('user_info', user_info)
                                 account.nick_name = user_info['nickName']
                                 account.gender = user_info['gender']
                                 account.language = user_info['language']
@@ -106,6 +110,10 @@ def wx_login(request):
                     return Response({'err': '提供的数据验证失败'}, status=HTTP_400_BAD_REQUEST)
                 except Exception as err:
                     return Response({'err': str(err)}, status=HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                return Response({'err': 'code 没有提供'}, status=HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'err': 'body 没有提供'}, status=HTTP_400_BAD_REQUEST)
     return Response({'err': '访问方式不对'}, status=HTTP_400_BAD_REQUEST)
 
 
