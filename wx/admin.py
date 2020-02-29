@@ -93,7 +93,10 @@ class CompanyEmployeeAdmin(AutoUpdateUserModelAdmin):
 
 @admin.register(WxUser)
 class WxUserAdmin(UserAdmin):
-    readonly_fields = ('last_login', 'date_joined', 'mobile_data', 'mobile_index')
+    readonly_fields = (
+        'last_login', 'date_joined', 'mobile_data', 'mobile_index',
+        'nick_name', 'city', 'province', 'country', 'china_district', 'avatar_url'
+    )
     search_fields = [
         'username', 'openid', 'email', 'mobile_index', 'first_name', 'last_name', 'nick_name', 'company__company_name']
     list_filter = ['is_owner', 'is_client', 'is_manager']

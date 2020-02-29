@@ -1,10 +1,4 @@
-import binascii
-import hashlib
-import json
 import logging
-
-from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
 
 from django_filters import rest_framework as filters
 
@@ -12,10 +6,12 @@ from rest_framework.decorators import api_view
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.response import Response
 from rest_framework.status import *
+from rest_framework.views import APIView
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from weixin import WXAPPAPI
+from weixin.oauth2 import OAuth2AuthExchangeError
 
 from .serializers import *
 
@@ -43,78 +39,63 @@ class WxFilter(filters.FilterSet):
         return filter_class
 
 
-def make_user_info(openid=None):
-    key = settings.SECRET_KEY
+def create_or_update_user_info(openid, user_info):
     if openid:
-        username = hashlib.pbkdf2_hmac("sha256", openid.encode(encoding='utf-8'), key.encode(encoding='utf-8'), 10)
-        password = hashlib.pbkdf2_hmac("sha256", username, openid.encode(encoding='utf-8'), 10)
-        return {'username': binascii.hexlify(username).decode(), 'password': binascii.hexlify(password).decode()}
-
-
-def create_user_by_openid(openid=None):
-    if openid:
-        user_info = make_user_info(openid=openid)
-        account = WxUser.objects.create(openid=openid, **user_info)
+        if user_info:
+            account, created = WxUser.objects.update_or_create(openid=openid, defaults=user_info)
+        else:
+            account, created = WxUser.objects.get_or_create(openid=openid)
         return account
     return None
 
 
 @api_view(["GET"])
 def api_root(request):
-    urls = {'admin': '/admin/', 'api': '/api/'}
+    urls = {'method': request.method, 'admin': '/admin/', 'api': '/api/'}
     return Response(urls)
 
 
-@csrf_exempt
-@api_view(["GET", "POST"])
-def wx_login(request):
-    if request.method == "POST":
-        if request.body:
-            received_data = json.loads(request.body.decode('utf-8'))
-            code = received_data.get('code', None)
-            print('code', code)
-            logger.info("Code: {0}".format(code))
-            user_info = received_data.get('user_info', None)
-            print('user_info', user_info)
-            logger.info("user_info: {0}".format(user_info))
-            if code:
-                api = WXAPPAPI(appid=settings.WX_APP_ID, app_secret=settings.WX_APP_SECRET)
-                try:
-                    session_info = api.exchange_code_for_session_key(code=code)
-                    openid = session_info.get('openid', None)
-                    print('openid', openid)
-                    if openid:
-                        queryset = WxUser.objects.filter(openid=openid)
-                        if queryset.exists():
-                            account = queryset.first()
-                        else:
-                            account = create_user_by_openid(openid=openid)
-                        if account:
-                            if user_info:
-                                print('user_info', user_info)
-                                account.nick_name = user_info['nickName']
-                                account.gender = user_info['gender']
-                                account.language = user_info['language']
-                                account.city = user_info['city']
-                                account.province = user_info['province']
-                                account.country = user_info['country']
-                                account.avatar_url = user_info['avatarUrl']
-                                account.save()
-                                logger.info("Account saved: pk={0}".format(account.pk))
-                            token = JfwTokenObtainPairSerializer.get_token(account).access_token
-                            is_sync = False
-                            if account.nick_name:
-                                is_sync = True
-                            return Response({'jwt': str(token), 'is_sync': is_sync}, status=HTTP_200_OK)
-                        return Response({'err': '数据库连接失败'}, status=HTTP_500_INTERNAL_SERVER_ERROR)
-                    return Response({'err': '提供的数据验证失败'}, status=HTTP_400_BAD_REQUEST)
-                except Exception as err:
-                    return Response({'err': str(err)}, status=HTTP_500_INTERNAL_SERVER_ERROR)
-            else:
-                return Response({'err': 'code 没有提供'}, status=HTTP_400_BAD_REQUEST)
-        else:
-            return Response({'err': 'body 没有提供'}, status=HTTP_400_BAD_REQUEST)
-    return Response({'err': '访问方式不对'}, status=HTTP_400_BAD_REQUEST)
+class WxLoginView(APIView):
+    authentication_classes = []
+    permission_classes = []
+    fields = {
+        'nick_name': 'nickName',
+        'gender': 'gender',
+        'language': 'language',
+        'city': 'city',
+        'province': 'province',
+        'country': 'country',
+        'avatar_url': 'avatarUrl',
+    }
+
+    def post(self, request):
+        token = ''
+        is_sync = ''
+        user_info = dict()
+        code = request.data.get('code')
+        logger.info("Code: {0}".format(code))
+        user_info_raw = request.data.get('user_info', None)
+        logger.info("user_info: {0}".format(user_info_raw))
+        if code:
+            api = WXAPPAPI(appid=settings.WX_APP_ID, app_secret=settings.WX_APP_SECRET)
+            try:
+                session_info = api.exchange_code_for_session_key(code=code)
+            except OAuth2AuthExchangeError:
+                session_info = None
+            if session_info:
+                openid = session_info.get('openid', None)
+                if openid:
+                    if user_info_raw:
+                        for k, v in self.fields.items():
+                            user_info[k] = user_info_raw.get(v)
+                    account = create_or_update_user_info(openid, user_info)
+                    if account:
+                        token = JfwTokenObtainPairSerializer.get_token(account).access_token
+                        is_sync = False
+                        if account.nick_name:
+                            is_sync = True
+                        return Response({'jwt': str(token), 'is_sync': is_sync}, status=HTTP_200_OK)
+        return Response({'jwt': str(token), 'is_sync': is_sync}, status=HTTP_204_NO_CONTENT)
 
 
 class JfwTokenObtainPairView(TokenObtainPairView):

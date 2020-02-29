@@ -1,10 +1,10 @@
-import random
+import hashlib
 from datetime import datetime
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
 
 from jfw.utils import rsa_encrypt, rsa_decrypt, pbkdf2_hmac_encrypt
 
@@ -236,7 +236,7 @@ class Dish(models.Model):
     @property
     def tags(self):
         res = []
-        for t in self.dish_tag.all():
+        for t in getattr(self, 'dish_tag').all():
             res.append(t.tag_name)
         return ', '.join(res)
 
@@ -411,6 +411,18 @@ class WxUser(AbstractUser):
             self.pk,
             self.username,
         )
+
+    def create_username_password(self):
+        if not self.username and not self.password and self.openid:
+            key = settings.SECRET_KEY
+            self.username = hashlib.pbkdf2_hmac(
+                "sha256", getattr(self, 'openid').encode(encoding='utf-8'), key.encode(encoding='utf-8'), 10).hex()
+            self.password = hashlib.pbkdf2_hmac(
+                "sha256", self.username.encode(), getattr(self, 'openid').encode(encoding='utf-8'), 10).hex()
+
+    def save(self, *args, **kwargs):
+        self.create_username_password()
+        super().save(*args, **kwargs)
 
 
 class CompanyEmployee(models.Model):

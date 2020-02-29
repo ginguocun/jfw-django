@@ -16,7 +16,7 @@ app_name = WxConfig.name
 
 urlpatterns = format_suffix_patterns([
     re_path(r'', include_docs_urls(title=API_TITLE, description=API_DESCRIPTION)),
-    re_path(r'^wx_login/$', wx_login, name='wx_login'),
+    re_path(r'^wx_login/$', WxLoginView.as_view(), name='wx_login'),
     re_path(r'^token/$', JfwTokenObtainPairView.as_view(), name='token_obtain_pair'),
     re_path(r'^restaurants/$', RestaurantListView.as_view(), name='restaurants'),
     re_path(r'^dish_tags/$', DishTagListView.as_view(), name='dish_tags'),
