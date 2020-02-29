@@ -74,7 +74,7 @@ class WxLoginView(APIView):
         user_info = dict()
         code = request.data.get('code')
         logger.info("Code: {0}".format(code))
-        user_info_raw = request.data.get('user_info', None)
+        user_info_raw = request.data.get('user_info', {})
         logger.info("user_info: {0}".format(user_info_raw))
         if code:
             api = WXAPPAPI(appid=settings.WX_APP_ID, app_secret=settings.WX_APP_SECRET)
