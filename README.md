@@ -2,12 +2,6 @@
 
 ### 项目维护
 
-#### 进入服务器
-
-```
-ssh -i /Users/jin/OneDrive/TechBrew-Django/tb-p.pem root@39.98.48.25
-```
-
 #### 进入项目路径
 
 ```
@@ -64,15 +58,6 @@ pip3 install --upgrade setuptools pip
 ```
 pip install -r requirements.txt
 ```
-
-#### 查看防火墙状态
-
-```
-ufw status
-ufw allow 9091/tcp
-```
-
-
 
 ## 用户小程序进入流程
 
