@@ -392,12 +392,20 @@ class WxUser(AbstractUser):
     datetime_updated = models.DateTimeField(verbose_name=_('更新时间'), auto_now=True)
 
     def _get_mobile(self):
+        """
+        获取 mobile 的数据进行解密后返回
+        :return: 解密后的数据
+        """
         if self.mobile_data:
             return rsa_decrypt(self.mobile_data)
         else:
             return None
 
     def _set_mobile(self, mobile):
+        """
+        设置 mobile 的值
+        :return: 加密后存储
+        """
         self.mobile_data = rsa_encrypt(mobile)
         self.mobile_index = pbkdf2_hmac_encrypt(mobile)
 
@@ -496,7 +504,7 @@ class CompanyEmployee(models.Model):
     def __str__(self):
         return "{0} {1}".format(
             self.employee_name,
-            self.employee_code,
+            self.mobile,
         )
 
 

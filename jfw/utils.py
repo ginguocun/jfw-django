@@ -79,6 +79,11 @@ def rsa_decrypt(crypto):
 
 
 def pbkdf2_hmac_encrypt(d_str):
+    """
+    单向加密数据
+    :param d_str: 文本
+    :return: 加密后的数据
+    """
     dk = hashlib.pbkdf2_hmac('sha256', d_str.encode(), settings.SECRET_KEY.encode(), 100)
     crypto = binascii.hexlify(dk).decode()
     return crypto
