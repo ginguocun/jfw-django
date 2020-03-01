@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.forms import model_to_dict
 from django_filters import rest_framework as filters
 
 from rest_framework.decorators import api_view
@@ -43,10 +44,10 @@ class WxFilter(filters.FilterSet):
 def create_or_update_user_info(openid, user_info):
     if openid:
         if user_info:
-            account, created = WxUser.objects.update_or_create(openid=openid, defaults=user_info)
+            user, created = WxUser.objects.update_or_create(openid=openid, defaults=user_info)
         else:
-            account, created = WxUser.objects.get_or_create(openid=openid)
-        return account
+            user, created = WxUser.objects.get_or_create(openid=openid)
+        return user
     return None
 
 
@@ -57,6 +58,10 @@ def api_root(request):
 
 
 class WxLoginView(APIView):
+    """
+    post:
+    微信登录接口
+    """
     authentication_classes = []
     permission_classes = []
     fields = {
@@ -71,7 +76,6 @@ class WxLoginView(APIView):
 
     def post(self, request):
         token = ''
-        is_sync = ''
         user_info = dict()
         code = request.data.get('code')
         logger.info("Code: {0}".format(code))
@@ -91,14 +95,21 @@ class WxLoginView(APIView):
                     if user_info_raw:
                         for k, v in self.fields.items():
                             user_info[k] = user_info_raw.get(v)
-                    account = create_or_update_user_info(openid, user_info)
-                    if account:
-                        token = JfwTokenObtainPairSerializer.get_token(account).access_token
-                        is_sync = False
-                        if account.nick_name:
-                            is_sync = True
-                        return Response({'jwt': str(token), 'is_sync': is_sync}, status=HTTP_200_OK)
-        return Response({'jwt': str(token), 'is_sync': is_sync}, status=HTTP_204_NO_CONTENT)
+                    user = create_or_update_user_info(openid, user_info)
+                    if user:
+                        token = JfwTokenObtainPairSerializer.get_token(user).access_token
+                        return Response(
+                            {
+                                'jwt': str(token),
+                                'user': model_to_dict(
+                                    user,
+                                    fields=[
+                                        'company', 'restaurant', 'current_role',
+                                        'is_owner', 'is_client', 'is_manager'
+                                    ])
+                            },
+                            status=HTTP_200_OK)
+        return Response({'jwt': str(token), 'user': {}}, status=HTTP_204_NO_CONTENT)
 
 
 class JfwTokenObtainPairView(TokenObtainPairView):
@@ -109,11 +120,16 @@ class JfwTokenObtainPairView(TokenObtainPairView):
 
 
 class RestaurantListView(ListCreateAPIView):
+    """
+    get:
+    获取餐馆列表
+
+    post:
+    创建餐馆
+    """
     queryset = Restaurant.objects.filter(is_active=True)
     serializer_class = RestaurantListSerializer
-    search_fields = (
-        'restaurant_name', 'restaurant_code'
-    )
+    search_fields = ('restaurant_name', 'restaurant_code')
 
 
 class DishTagListFilter(WxFilter):
@@ -137,9 +153,7 @@ class DishTagListView(ListCreateAPIView):
     """
     queryset = DishTag.objects.filter(is_active=True).all()
     serializer_class = DishTagListSerializer
-    search_fields = [
-        'tag_name'
-    ]
+    search_fields = ['tag_name']
     filterset_class = DishTagListFilter
 
 
@@ -164,14 +178,14 @@ class DishListView(ListCreateAPIView):
     permission_classes = []
     queryset = Dish.objects.filter(is_active=True).all()
     serializer_class = DishListSerializer
-    search_fields = [
-        'dish_name', 'dish_desc'
-    ]
+    search_fields = ['dish_name', 'dish_desc']
     filterset_class = DishListFilter
 
     def get_queryset(self):
         if self.request.user.id:
-            queryset = self.queryset.filter(restaurant__company_related_restaurant__wx_user__id=self.request.user.id)
+            queryset = self.queryset.filter(
+                restaurant__company_related_restaurant__wx_user__id=self.request.user.id
+            )
         else:
             queryset = self.queryset.order_by('-pk')
         return queryset
@@ -198,9 +212,7 @@ class CompanyListView(ListCreateAPIView):
     """
     queryset = Company.objects.filter(is_active=True)
     serializer_class = CompanyListSerializer
-    search_fields = (
-        'company_name', 'company_code', 'company_address'
-    )
+    search_fields = ['company_name', 'company_code', 'company_address']
     filterset_class = CompanyListFilter
 
 
@@ -225,9 +237,7 @@ class CompanyEmployeeListView(ListCreateAPIView):
     """
     queryset = CompanyEmployee.objects.filter(is_active=True)
     serializer_class = CompanyEmployeeListSerializer
-    search_fields = (
-        'employee_name', 'mobile_index',
-    )
+    search_fields = ['employee_name', 'mobile_index']
     filterset_class = CompanyEmployeeListFilter
 
 
@@ -267,9 +277,14 @@ class OrderItemListFilter(WxFilter):
 
 
 class OrderItemListView(ListCreateAPIView):
+    """
+    get:
+    获取订单详情列表
+
+    post:
+    创建订单详情
+    """
     queryset = OrderItem.objects.filter(is_active=True)
     serializer_class = OrderItemListSerializer
     filterset_class = OrderItemListFilter
-    search_fields = (
-        'dish__title', 'order_code'
-    )
+    search_fields = ['dish__title', 'order_code']

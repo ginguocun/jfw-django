@@ -409,7 +409,7 @@ class WxUser(AbstractUser):
     def __str__(self):
         return "[{0}] {1}".format(
             self.pk,
-            self.username,
+            self.nick_name,
         )
 
     def create_username_password(self):
