@@ -42,6 +42,12 @@ class WxFilter(filters.FilterSet):
 
 
 def create_or_update_user_info(openid, user_info):
+    """
+    创建或者更新用户信息
+    :param openid: 微信 openid
+    :param user_info: 微信用户信息
+    :return: 返回用户对象
+    """
     if openid:
         if user_info:
             user, created = WxUser.objects.update_or_create(openid=openid, defaults=user_info)
@@ -75,13 +81,14 @@ class WxLoginView(APIView):
     }
 
     def post(self, request):
-        token = ''
         user_info = dict()
         code = request.data.get('code')
         logger.info("Code: {0}".format(code))
         user_info_raw = request.data.get('user_info', {})
         if isinstance(user_info_raw, str):
             user_info_raw = json.loads(user_info_raw)
+        if not isinstance(user_info_raw, dict):
+            user_info_raw = {}
         logger.info("user_info: {0}".format(user_info_raw))
         if code:
             api = WXAPPAPI(appid=settings.WX_APP_ID, app_secret=settings.WX_APP_SECRET)
@@ -109,7 +116,7 @@ class WxLoginView(APIView):
                                     ])
                             },
                             status=HTTP_200_OK)
-        return Response({'jwt': str(token), 'user': {}}, status=HTTP_204_NO_CONTENT)
+        return Response({'jwt': None, 'user': {}}, status=HTTP_204_NO_CONTENT)
 
 
 class JfwTokenObtainPairView(TokenObtainPairView):
